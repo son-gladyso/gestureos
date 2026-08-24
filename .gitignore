@@ -1,0 +1,10 @@
+node_modules/
+.vs/
+.vscode/
+coverage/
+dist/
+*.log
+*.exe
+*.docx
+.DS_Store
+Thumbs.db

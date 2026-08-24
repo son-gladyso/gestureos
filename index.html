@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="基于 MediaPipe 的实时手势识别与粒子特效交互演示 — GestureOS"
+    />
+    <meta name="theme-color" content="#020610" />
+    <meta name="author" content="GestureOS" />
+
+    <!-- Security policies -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval' blob:; worker-src blob: https://cdn.jsdelivr.net; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; connect-src 'self' https://cdn.jsdelivr.net; img-src 'self' data: blob:; media-src 'self' blob:; object-src 'none'"
+    />
+    <!--
+      Permissions-Policy must be set via HTTP response header (not supported as <meta>):
+      Permissions-Policy: camera=(self), microphone=(), geolocation=()
+    -->
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="GestureOS — Hand Motion VFX" />
+    <meta property="og:description" content="用你的手势控制粒子特效 — 实时 AI 手势识别交互体验" />
+    <meta property="og:type" content="website" />
+
+    <title>GestureOS — Hand Motion VFX</title>
+
+    <!-- Inline SVG Favicon (no external file needed) -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖐️</text></svg>"
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="stage" aria-label="手势粒子交互画布">
+      <!-- 多层背景 -->
+      <div class="bg-aurora" aria-hidden="true"></div>
+      <div class="bg-grid" aria-hidden="true"></div>
+      <div class="bg-vignette" aria-hidden="true"></div>
+      <div class="scanlines" aria-hidden="true"></div>
+
+      <video id="camera" class="camera" autoplay playsinline muted aria-hidden="true"></video>
+      <canvas id="fx" class="fx" aria-hidden="true"></canvas>
+
+      <!-- 四角标记线 -->
+      <div class="corner-mark tl" aria-hidden="true"></div>
+      <div class="corner-mark tr" aria-hidden="true"></div>
+      <div class="corner-mark bl" aria-hidden="true"></div>
+      <div class="corner-mark br" aria-hidden="true"></div>
+
+      <!-- 加载遮罩 -->
+      <div id="loader" class="loader" role="status" aria-live="polite">
+        <div class="loader-ring">
+          <div class="loader-ring-inner"></div>
+        </div>
+        <p class="loader-text">INITIALIZING SYSTEM<span class="loader-dots"></span></p>
+        <p class="loader-sub">Loading MediaPipe Hand Model...</p>
+      </div>
+
+      <!-- 顶部 HUD -->
+      <header class="hud-top">
+        <div class="hud-left">
+          <h1 class="logo" data-text="GESTUREOS">
+            <span class="logo-main">GESTURE</span><span class="logo-accent">OS</span>
+          </h1>
+          <div class="status-row">
+            <span class="status-dot"></span>
+            <p id="status" class="status-text" aria-live="polite" aria-atomic="true">
+              SYSTEM STANDBY
+            </p>
+          </div>
+        </div>
+
+        <div class="hud-right">
+          <div class="mode-label">ACTIVE MODE</div>
+          <div id="gesture" class="mode-badge" data-mode="idle">IDLE</div>
+          <div id="fps" class="fps-display">-- FPS</div>
+        </div>
+      </header>
+
+      <!-- 底部指南 -->
+      <footer class="hud-bottom">
+        <div class="tip-card" data-mode="tracking">
+          <div class="tip-icon">☝️</div>
+          <div class="tip-body">
+            <div class="tip-title">TRACKING</div>
+            <div class="tip-desc">星寰引力 · 3D行星环</div>
+          </div>
+        </div>
+        <div class="tip-card" data-mode="pinch">
+          <div class="tip-icon">🤏</div>
+          <div class="tip-body">
+            <div class="tip-title">PINCH</div>
+            <div class="tip-desc">微观宇宙 · 探索太阳系</div>
+          </div>
+        </div>
+        <div class="tip-card" data-mode="open">
+          <div class="tip-icon">🖐️</div>
+          <div class="tip-body">
+            <div class="tip-title">OPEN</div>
+            <div class="tip-desc">全息灵莲 · 赛博绽放</div>
+          </div>
+        </div>
+        <div class="tip-card" data-mode="fist">
+          <div class="tip-icon">⚔️</div>
+          <div class="tip-body">
+            <div class="tip-title">BLADE STORM</div>
+            <div class="tip-desc">紧握拳头 · 万剑归宗</div>
+          </div>
+        </div>
+      </footer>
+
+      <!-- 粒子计数 -->
+      <div id="particle-count" class="particle-counter" aria-hidden="true">P: 0</div>
+
+      <!-- 错误提示覆层 -->
+      <div id="error-overlay" class="error-overlay" role="alert" aria-live="assertive" hidden>
+        <div class="error-content">
+          <div class="error-icon">⚠️</div>
+          <p id="error-message" class="error-text">发生未知错误</p>
+          <button id="error-retry" class="error-btn" type="button">重新加载</button>
+        </div>
+      </div>
+    </main>
+
+    <noscript>
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          background: #020610;
+          color: #eee;
+          font-size: 18px;
+          text-align: center;
+          padding: 2rem;
+        "
+      >
+        <p>此演示需要启用 JavaScript。请在浏览器设置中启用后刷新页面。</p>
+      </div>
+    </noscript>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js"
+      integrity="sha384-q1KhAZhJcJXr3zfC3Tz07pBqQSabwFIZhXlmlUAB8s0zk4ETWERkIKGBCFQ5Jc3e"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js"
+      integrity="sha384-oHwoZ9HyKv5ark5VOH+XWdbNfmhYtptAOBuV8plz6mAfXvTA6d8fULuYllWouEK2"
+      crossorigin="anonymous"
+    ></script>
+    <script src="./gesture-config.js"></script>
+    <script src="./gesture-helpers.js"></script>
+    <script src="./gesture-detector.js"></script>
+    <script src="./gesture-policies.js"></script>
+    <script src="./script.js"></script>
+  </body>
+</html>
