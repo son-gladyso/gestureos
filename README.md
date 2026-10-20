@@ -1,5 +1,7 @@
 # GestureOS
 
+[简体中文](docs/i18n/README.zh-CN.md) · [English](README.md) · [日本語](docs/i18n/README.ja.md) · [한국어](docs/i18n/README.ko.md) · [Español](docs/i18n/README.es.md) · [Français](docs/i18n/README.fr.md) · [Deutsch](docs/i18n/README.de.md) · [Português (Brasil)](docs/i18n/README.pt-BR.md)
+
 **Turn a pinch, an open hand, or a fist into an interaction with a browser particle scene.**
 
 GestureOS is a small experimental playground for creative-coding developers and anyone curious about camera-based interaction. It combines MediaPipe hand tracking with particle VFX and keeps the gesture rules separate from rendering, so you can explore both the effect and how it works.
